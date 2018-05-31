@@ -47,11 +47,11 @@ public class TestMultithread {
         thread.start();
         runners.add(thread);
 
-        
+
         Thread threadPrime = new Thread(new VerifyAmcl(c, d, bigPrime));
         threadPrime.setDaemon(true);
         threadPrime.start();
-        runners.add(threadPrime);*/
+        runners.add(threadPrime);
 
         for (Thread t : runners) {
             t.join();
