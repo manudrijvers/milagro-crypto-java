@@ -13,42 +13,42 @@ public class TestMultithread {
 
     @Test
     public void testAmclThreads() throws InterruptedException {
+        // set generator point
         BIG gx = new BIG(ROM.CURVE_Gx);
         BIG gy = new BIG(ROM.CURVE_Gy);
         ECP genG1 = new ECP(gx, gy);
 
+        // a = 5 * genG1
         ECP a = new ECP();
-        ECP b = new ECP();
-        BIG big = new BIG(5);
-
         a.copy(genG1);
         a = a.mul(new BIG(5));
 
+        // b = 10 * genG1
+        ECP b = new ECP();
         b.copy(genG1);
-        b = b.mul(new BIG(25));
-        assertTrue(a.mul(big).equals(b));
+        b = b.mul(new BIG(10));
 
+        // c = 7 * genG1
         ECP c = new ECP();
-        ECP d = new ECP();
-        BIG bigPrime = new BIG(7);
-
         c.copy(genG1);
-        c = c.mul(new BIG(3));
+        c = c.mul(new BIG(7));
 
+        // d = 14 * genG1
+        ECP d = new ECP();
         d.copy(genG1);
-        d = d.mul(new BIG(21));
-
-        assertTrue(c.mul(bigPrime).equals(d));
+        d = d.mul(new BIG(14));
 
         List<Thread> runners = new ArrayList<>();
 
-        Thread thread = new Thread(new VerifyAmcl(a, b, big));
+        // run a thread that repeatedly tests a + a = b
+        Thread thread = new Thread(new VerifyAmclAdd(a, b));
         thread.setDaemon(true);
         thread.start();
         runners.add(thread);
 
 
-        Thread threadPrime = new Thread(new VerifyAmcl(c, d, bigPrime));
+        // run a thread that repeatedly tests c + c = d
+        Thread threadPrime = new Thread(new VerifyAmclAdd(c, d));
         threadPrime.setDaemon(true);
         threadPrime.start();
         runners.add(threadPrime);
@@ -58,28 +58,37 @@ public class TestMultithread {
         }
     }
 
-    private class VerifyAmcl implements Runnable {
+    private class VerifyAmclAdd implements Runnable {
         private ECP a, b;
-        private BIG i;
+        private Thread thread;
 
-        public VerifyAmcl(ECP a, ECP b, BIG i) {
+        public VerifyAmclAdd(ECP a, ECP b) {
             this.a = a;
             this.b = b;
-            this.i = i;
         }
 
         public void invoke() {
-            assertTrue(a.mul(i).equals(b));
+            ECP temp = new ECP();
+            temp.copy(a);
+            temp.add(a);
+            assertTrue(temp.equals(b));
         }
 
         @Override
-        public void run() {
-            for (int i = 1000; i > 0; --i) {
-                invoke();
+        public void run()  {
+            try {
+                thread = Thread.currentThread();
+
+                for (int i = 10000; i > 0; --i) {
+                    invoke();
+                }
+                System.out.println("Thread " + thread.getName() + " done.");
+                thread.interrupt();
+            } catch (Exception e) {
+                System.out.println("Thread " + thread.getName() + " crashed.");
+                thread.interrupt();
+
             }
-            final Thread thread = Thread.currentThread();
-            System.out.println("Thread " + thread.getName() + " done.");
-            thread.interrupt();
         }
     }
 }
